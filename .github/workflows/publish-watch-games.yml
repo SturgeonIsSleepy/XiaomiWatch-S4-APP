@@ -1,0 +1,38 @@
+name: Publish 2048 v1.2.0 and Jump v1.0.0
+on:
+  push:
+    branches: [codex/watch-games-2048-1.2-jump-1.0]
+    paths: [.github/workflows/publish-watch-games.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Publish smoother 2048 and charge-to-jump releases'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload already-built applications and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in 'watchjump:1.0.0:watchjump-v1.0.0' 'watch2048:1.2.0:v1.2.0'; do
+            app="${spec%%:*}"
+            rest="${spec#*:}"
+            version="${rest%%:*}"
+            tag="${rest#*:}"
+            dir="releases/$app/$version"
+            (cd "$dir" && sha256sum --check SHA256SUMS.txt)
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              gh release create "$tag" --draft --target "$GITHUB_SHA" --title "$app $version" --notes-file "$dir/release-notes.md"
+            fi
+            gh release upload "$tag" "$dir"/* --clobber
+            if [ "$app" = watch2048 ]; then
+              gh release edit "$tag" --draft=false --latest
+            else
+              gh release edit "$tag" --draft=false --latest=false
+            fi
+          done

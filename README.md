@@ -2,16 +2,18 @@
 
 小米 Watch S4 应用。
 
-## 2048 · 1.1.0
+## 2048 · 1.2.0
 
-新增可关闭的轻量动画和可选的同方向连续合并：`16,8,8 → 16,16 → 32`。保留标准 2048 模式与旧版存档。
+缓入缓出的轻量滑动动画；支持标准模式、可选连续合并和动画开关，保留旧版存档。
 
-- [下载 1.1.0 RPK](releases/watch2048/1.1.0/com.sapnapboy.watch2048.debug.1.1.0.rpk)
-- [源码与构建说明](apps/watch2048/README.md)
-- [打包源码 ZIP](releases/watch2048/1.1.0/watch2048-1.1.0-source.zip)
-- [使用说明](releases/watch2048/1.1.0/使用说明.md)
-- [验证记录](releases/watch2048/1.1.0/验证记录.md)
+- [Release 与 RPK 下载](https://github.com/SturgeonIsSleepy/XiaomiWatch-S4-APP/releases/tag/v1.2.0)
+- [源码和构建说明](apps/watch2048/README.md)
 
-动画仅在滑动时短时执行，固定复用方块并限制定时器数量；可点击“动画”关闭。模拟器测试不能代替真机温控验证。
+## 跳一跳 · 1.0.0
 
-![连续合并结果](releases/watch2048/1.1.0/连续合并验证.png)
+按住蓄力、松手起跳；有进度条、角色下压、落地反馈、中心加分和最高分保存。
+
+- [Release 与 RPK 下载](https://github.com/SturgeonIsSleepy/XiaomiWatch-S4-APP/releases/tag/watchjump-v1.0.0)
+- [源码和构建说明](apps/watchjump/README.md)
+
+两个应用独立安装。本次仅做基础验证；模拟器不能替代真实手表的温控、功耗和帧率测试。

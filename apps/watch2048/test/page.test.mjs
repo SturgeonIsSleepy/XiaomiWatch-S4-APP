@@ -21,7 +21,7 @@ test('one gesture settles the complete chain, preserves keyed objects and leaves
  assert.equal(h.timers.size,0);swipe(vm);assert.equal(vm.score,48);assert.equal(vm.board[0],32);
  assert.equal(h.writes.length,1);assert.equal(h.writes[0].board[0],32);
  swipe(vm);assert.equal(h.writes.length,1);assert.equal(h.timers.size,1);
- let steps=0;while(h.timers.size){h.fire();assert.ok(++steps<=10);assert.ok(h.timers.size<=1);}
+ let steps=0;while(h.timers.size){h.fire();assert.ok(++steps<=28);assert.ok(h.timers.size<=1);}
  assert.equal(vm.busy,false);assert.equal(vm.cells[0].label,'32');assert.ok(vm.cells.every((c,i)=>c===objects[i]));
  assert.equal(h.timers.size,0);
 });

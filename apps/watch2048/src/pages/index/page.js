@@ -2,7 +2,8 @@ import storage from '@system.storage';
 import {newGame, move, isGameOver, isValidBoard} from '../../common/game';
 import {beginGesture, endGesture} from '../../common/gesture';
 const SAVE_KEY = 'game-v1'; // Preserve the original installation's save.
-const SLIDE_MS = 100;
+const SLIDE_MS = 144;
+const SLIDE_FRAMES = 9;
 const FEEDBACK_MS = 80;
 const INPUT_GAP_MS = 160;
 export default {
@@ -72,26 +73,28 @@ export default {
     if (!this._turn || this._dead || !this._visible) { this.settle(); return; }
     const frame = this._turn.frames[index];
     this.renderBoard(frame.before);
+    this._frameStart = Date.now();
     this.animateStep(index, 1);
   },
   animateStep(index, step) {
-    // Exactly three position updates per pass (~30 fps for 100 ms), no idle loop.
+    // At most nine short updates per pass. Elapsed time skips late frames under load.
     this._timer = setTimeout(() => {
       this._timer = null;
       if (!this._turn || !this._visible || this._dead) { this.settle(); return; }
       const frame = this._turn.frames[index];
-      const fraction = step / 3;
+      const progress = Math.min(1, Math.max(step / SLIDE_FRAMES, (Date.now() - this._frameStart) / SLIDE_MS));
+      const fraction = progress * progress * (3 - 2 * progress);
       frame.motions.forEach(m => {
         if (m.from === m.to) return;
         const x = 8 + ((m.from % 4) + (m.to % 4 - m.from % 4) * fraction) * 72;
         const y = 8 + (Math.floor(m.from / 4) + (Math.floor(m.to / 4) - Math.floor(m.from / 4)) * fraction) * 72;
         this.cells[m.from].position = 'left:' + x + 'px;top:' + y + 'px;visibility:visible;opacity:1;';
       });
-      if (step < 3) { this.animateStep(index, step + 1); return; }
+      if (progress < 1 && step < SLIDE_FRAMES) { this.animateStep(index, Math.max(step + 1, Math.floor(progress * SLIDE_FRAMES) + 1)); return; }
       if (index + 1 < this._turn.frames.length) { this.animatePass(index + 1); return; }
       this.renderBoard(this.board, null, null, frame.merged.concat([this._turn.spawned]));
       this._timer = setTimeout(() => { this._timer = null; this.settle(); }, FEEDBACK_MS);
-    }, Math.round(SLIDE_MS / 3));
+    }, Math.max(4, Math.min(16, this._frameStart + step * (SLIDE_MS / SLIDE_FRAMES) - Date.now())));
   },
   settle() {
     if (this._timer !== null) clearTimeout(this._timer);

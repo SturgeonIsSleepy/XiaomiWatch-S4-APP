@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const code=readFileSync(new URL('../src/common/game.js',import.meta.url),'utf8');
+const g=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+const source=readFileSync(new URL('../src/pages/index/page.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace('export default','return');
+function harness(){
+ let now=5000,id=0;const timers=new Map(),writes=[];
+ const storage={get(o){o.success('3');},set(o){writes.push(o.value);o.success?.();o.complete?.();}};
+ const names=['storage','ANCHOR','MAX_HOLD','charge','endpoint','landing','targetFor','arc','setTimeout','clearTimeout','Date'];
+ const args=[storage,g.ANCHOR,g.MAX_HOLD,g.charge,g.endpoint,g.landing,score=>g.targetFor(score,()=>.5),g.arc,
+  (fn,ms)=>{const key=++id;timers.set(key,{fn,ms});return key;},key=>timers.delete(key),{now:()=>now}];
+ const vm=new Function(...names,source)(...args);Object.assign(vm,structuredClone(vm.private));vm.onInit();
+ return {vm,timers,writes,advance(ms){now+=ms;},fire(){const [id,t]=timers.entries().next().value;timers.delete(id);now+=t.ms;t.fn();}};
+}
+const touch={identifier:0,clientX:230,clientY:300};
+const start=vm=>vm.touchStart({touches:[touch]});
+const end=vm=>vm.touchEnd({touches:[],changedTouches:[touch]});
+test('charge is capped, distance increases, arc lands exactly and collision/center bonus agree',()=>{
+ assert.equal(g.charge(-10),0);assert.equal(g.charge(5000),1);
+ assert.ok(g.distanceForHold(700)>g.distanceForHold(300));assert.equal(g.distanceForHold(1100),g.distanceForHold(5000));
+ const a={x:233,y:310,width:86},b={x:350,y:230,width:80};
+ const hold=(Math.hypot(b.x-a.x,b.y-a.y)-24)/.28,p=g.endpoint(a,b,hold);
+ assert.ok(Math.hypot(p.x-b.x,p.y-b.y)<.00001);assert.equal(g.landing(p,a,b).points,2);
+ assert.equal(g.landing({x:450,y:450},a,b).hit,false);
+ assert.deepEqual(g.arc(a,b,1),{x:350,groundY:230,y:230});assert.ok(g.arc(a,b,.5).y<230);
+});
+test('holding provides progress and compression, stops refreshing at full charge, hiding cancels',()=>{
+ const h=harness();assert.equal(h.timers.size,0);start(h.vm);h.advance(400);h.fire();
+ assert.equal(h.vm.phase,'charging');assert.match(h.vm.powerLabel,/蓄力/);assert.notEqual(h.vm.powerStyle,'width:0px;');
+ h.advance(1200);h.fire();assert.equal(h.timers.size,0);assert.match(h.vm.powerLabel,/已满/);
+ h.vm.onHide();assert.equal(h.vm.phase,'ready');assert.equal(h.timers.size,0);assert.equal(h.vm._finger,null);
+});
+test('release jumps, scores once and finishes camera with no idle timer',()=>{
+ const h=harness(),vm=h.vm;start(vm);
+ h.advance((Math.hypot(vm._target.x-vm._x,vm._target.y-vm._y)-24)/.28);
+ end(vm);end(vm);assert.equal(vm.phase,'flying');assert.equal(h.timers.size,1);
+ let n=0;while(h.timers.size){h.fire();assert.ok(++n<=27);assert.ok(h.timers.size<=1);}
+ assert.equal(vm.phase,'ready');assert.equal(vm.score,2);assert.equal(vm.best,3);assert.equal(vm._current.x,233);assert.equal(vm._current.y,310);
+});
+test('multitouch and hiding midflight cannot leave active work behind',()=>{
+ const h=harness(),vm=h.vm;start(vm);vm.touchStart({touches:[touch,{...touch,identifier:1}]});
+ assert.equal(vm.phase,'ready');assert.equal(h.timers.size,0);
+ start(vm);h.advance(1100);end(vm);assert.equal(vm.phase,'flying');vm.onHide();
+ assert.equal(vm.phase,'over');assert.equal(h.timers.size,0);vm.onDestroy();assert.equal(h.timers.size,0);
+});

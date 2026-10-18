@@ -1,0 +1,39 @@
+<template>
+  <div class="page" ontouchstart="touchStart" ontouchend="touchEnd" ontouchcancel="cancelCharge">
+    <div class="header"><text class="title">跳一跳</text><text class="score">{{score}}</text></div>
+    <text class="best">最佳 {{best}} · 正中中心 +2</text>
+    <div for="p in platforms" tid="id" class="platform-side" style="{{p.sideStyle}}"></div>
+    <div for="p in platforms" tid="id" class="platform-top" style="{{p.topStyle}}"></div>
+    <div for="p in platforms" tid="id" class="platform-mark" style="{{p.markStyle}}"></div>
+    <div class="shadow" style="{{shadowStyle}}"></div>
+    <div class="body" style="{{bodyStyle}}"></div>
+    <div class="head" style="{{headStyle}}"><div class="eye"></div><div class="eye"></div></div>
+    <text class="hint">{{hint}}</text>
+    <text class="power-label">{{powerLabel}}</text>
+    <div class="power-track"><div class="power-fill" style="{{powerStyle}}"></div></div>
+    <text class="restart" onclick="restart">{{phase === 'over' ? '再来' : '新局'}}</text>
+  </div>
+</template>
+<script>
+import page from './page';
+export default page;
+</script>
+<style>
+.page { width:466px; height:466px; background-color:#111b28; }
+.header { position:absolute; left:126px; top:40px; width:214px; height:44px; flex-direction:row; justify-content:space-between; align-items:center; }
+.title { font-size:30px; font-weight:bold; color:#f5f4e9; }
+.score { font-size:38px; font-weight:bold; color:#bce98b; }
+.best { position:absolute; left:110px; top:87px; width:246px; text-align:center; font-size:17px; color:#a1afbd; }
+.platform-side { position:absolute; border-radius:12px; }
+.platform-top { position:absolute; height:30px; border-radius:40px; border-width:2px; border-color:#d4e5e8; }
+.platform-mark { position:absolute; width:16px; height:6px; border-radius:6px; background-color:#f7faf5; }
+.shadow { position:absolute; height:8px; border-radius:12px; background-color:#050b12; }
+.body { position:absolute; border-radius:8px; background-color:#8fc86c; }
+.head { position:absolute; width:22px; height:22px; border-radius:11px; background-color:#d0f2a3; flex-direction:row; justify-content:center; align-items:center; }
+.eye { width:3px; height:4px; margin-left:2px; margin-right:2px; border-radius:2px; background-color:#172b24; }
+.hint { position:absolute; left:70px; top:356px; width:326px; height:28px; text-align:center; color:#e3ebee; font-size:21px; }
+.power-label { position:absolute; left:106px; top:386px; width:254px; text-align:center; font-size:18px; color:#bce98b; }
+.power-track { position:absolute; left:115px; top:414px; width:236px; height:9px; border-radius:5px; background-color:#334456; }
+.power-fill { height:9px; border-radius:5px; background-color:#bce98b; }
+.restart { position:absolute; left:196px; top:428px; width:74px; height:30px; text-align:center; color:#f0b77a; font-size:19px; }
+</style>
