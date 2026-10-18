@@ -1,0 +1,9 @@
+node_modules/
+build/
+dist/
+.temp*/
+.aiot*/
+sign/
+*.pem
+*.log
+.DS_Store

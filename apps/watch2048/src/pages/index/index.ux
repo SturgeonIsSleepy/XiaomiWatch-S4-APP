@@ -1,0 +1,50 @@
+<template>
+  <div class="page">
+    <div class="header"><text class="title">2048</text><text class="score">得分 {{score}}</text></div>
+    <div class="options">
+      <text class="option {{chain ? 'enabled' : ''}}" onclick="toggleChain">连合：{{chain ? '开' : '关'}}</text>
+      <text class="option {{animations ? 'enabled' : ''}}" onclick="toggleAnimations">动画：{{animations ? '开' : '关'}}</text>
+    </div>
+    <div class="board" ontouchstart="touchStart" ontouchend="touchEnd">
+      <div for="slot in slots" tid="id" class="slot" style="{{slot.position}}"></div>
+      <div for="cell in cells" tid="id" class="tile {{cell.tone}}{{cell.effect}}" style="{{cell.position}}">
+        <text class="number {{cell.font}}">{{cell.label}}</text>
+      </div>
+    </div>
+    <div class="footer"><text class="hint">{{message}}</text><text class="restart" onclick="restart">新局</text></div>
+  </div>
+</template>
+<script>
+import page from './page';
+export default page;
+</script>
+<style>
+.page { width:466px; height:466px; padding-top:38px; flex-direction:column; align-items:center; background-color:#11161d; }
+.header { width:234px; height:36px; flex-direction:row; justify-content:space-between; align-items:center; }
+.title { font-size:30px; font-weight:bold; color:#f8f3e9; }
+.score { font-size:20px; color:#e2c98a; }
+.options { width:248px; height:30px; flex-direction:row; justify-content:space-between; align-items:center; }
+.option { font-size:19px; color:#a9b3bc; height:30px; padding-left:8px; padding-right:8px; }
+.enabled { color:#f5cc71; }
+.board { width:300px; height:300px; background-color:#383f47; border-radius:17px; }
+.slot, .tile { position:absolute; width:68px; height:68px; border-radius:9px; justify-content:center; align-items:center; }
+.slot { background-color:#555e68; }
+.tile { visibility:visible; }
+.number { font-size:27px; font-weight:bold; color:#161d25; }
+.font-medium { font-size:23px; }
+.font-small { font-size:18px; }
+.footer { width:220px; height:34px; flex-direction:row; justify-content:space-between; align-items:center; }
+.hint { font-size:18px; color:#d0d7dc; }
+.restart { height:34px; padding-left:14px; padding-right:6px; font-size:20px; color:#f5cc71; }
+.tile-2 { background-color:#eee6d8; }
+.tile-4 { background-color:#ecd6ac; }
+.tile-8 { background-color:#e7aa70; }
+.tile-16 { background-color:#e8905e; }
+.tile-32 { background-color:#e7765e; }
+.tile-64 { background-color:#e65d4e; }
+.tile-128 { background-color:#e9cf75; }
+.tile-256 { background-color:#ecc95f; }
+.tile-512 { background-color:#eac34b; }
+.tile-1024 { background-color:#e6b938; }
+.tile-2048 { background-color:#e5ad2f; }
+</style>

@@ -1,0 +1,29 @@
+{
+  "package": "com.sapnapboy.watch2048",
+  "name": "2048",
+  "versionName": "1.1.0",
+  "versionCode": 2,
+  "minPlatformVersion": 1200,
+  "icon": "/common/logo.png",
+  "simulationVersion": "default",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.storage"
+    }
+  ],
+  "config": {
+    "logLevel": "error",
+    "designWidth": 466
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/index": {
+        "component": "index"
+      }
+    }
+  }
+}
