@@ -1,0 +1,37 @@
+name: Publish Watch S4 2048 v1.1.0 assets
+on:
+  push:
+    branches: [codex/watch2048-1.1.0]
+    paths: [.github/workflows/publish-watch2048-v1.1.0.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Publish Watch S4 2048 v1.1.0 release assets'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare existing release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=releases/watch2048/1.1.0
+          mkdir release-assets
+          cp "$src/com.sapnapboy.watch2048.debug.1.1.0.rpk" release-assets/
+          cp "$src/watch2048-1.1.0-source.zip" release-assets/
+          cp "$src/使用说明.md" release-assets/README.zh-CN.md
+          cp "$src/验证记录.md" release-assets/verification.zh-CN.md
+          cp "$src/连续合并验证.png" release-assets/chain-merge.png
+          cp "$src/存档恢复验证.png" release-assets/save-restored.png
+          cd release-assets
+          sha256sum *.rpk *.zip *.md *.png > SHA256SUMS.txt
+      - name: Upload attachments and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v1.1.0 release-assets/* --clobber
+          gh release edit v1.1.0 --draft=false --latest
