@@ -16,4 +16,11 @@
 - [Release 与 RPK 下载](https://github.com/SturgeonIsSleepy/XiaomiWatch-S4-APP/releases/tag/watchjump-v1.2.0)
 - [源码与说明](apps/watchjump/README.md)
 
-两个应用独立安装。仅做基础验证；模拟器不能替代实体手表的震感、温控、功耗和帧率测试。
+## 迷你赛车 · 1.0.0
+
+三车道躲避来车，滑动或点击换道、逐步提速、暂停与最高里程保存。
+
+- [Release 与 RPK 下载](https://github.com/SturgeonIsSleepy/XiaomiWatch-S4-APP/releases/tag/watchrace-v1.0.0)
+- [源码与说明](apps/watchrace/README.md)
+
+各应用独立安装。仅做基础验证；模拟器不能替代实体手表的震感、温控、功耗和帧率测试。

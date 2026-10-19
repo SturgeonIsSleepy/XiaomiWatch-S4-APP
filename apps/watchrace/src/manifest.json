@@ -1,0 +1,29 @@
+{
+  "package": "com.sapnapboy.watchrace",
+  "name": "迷你赛车",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minPlatformVersion": 1200,
+  "icon": "/common/logo.png",
+  "simulationVersion": "default",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.storage"
+    }
+  ],
+  "config": {
+    "logLevel": "error",
+    "designWidth": 466
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/index": {
+        "component": "index"
+      }
+    }
+  }
+}

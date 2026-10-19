@@ -1,0 +1,59 @@
+<template>
+  <div class="page" ontouchstart="touchStart" ontouchend="touchEnd" ontouchcancel="cancelTouch">
+    <div class="verge"></div><div class="road"></div>
+    <div class="edge left"></div><div class="edge right"></div>
+    <div for="m in marks" tid="id" class="mark" style="{{m.style}}"></div>
+    <div for="c in traffic" tid="id" class="car enemy" style="{{c.style}}">
+      <div class="glass front"></div><div class="glass rear"></div>
+      <div class="light light-left"></div><div class="light light-right"></div>
+    </div>
+    <div class="car player" style="{{playerStyle}}">
+      <div class="stripe"></div><div class="glass front"></div><div class="glass rear"></div>
+      <div class="light light-left"></div><div class="light light-right"></div>
+    </div>
+    <div class="hud"><text class="distance">{{meters}} m</text></div>
+    <text if="{{phase === 'running'}}" class="pause" onclick="pause">Ⅱ</text>
+    <text if="{{phase === 'running'}}" class="speed">{{pace}} km/h</text>
+    <text if="{{phase === 'running'}}" class="arrow arrow-left">‹</text>
+    <text if="{{phase === 'running'}}" class="arrow arrow-right">›</text>
+    <div if="{{phase !== 'running'}}" class="card">
+      <text class="title">{{phase === 'ready' ? '迷你赛车' : (phase === 'paused' ? '已暂停' : '本次行驶')}}</text>
+      <text class="result">{{phase === 'ready' ? '三车道 · 躲避来车' : meters + ' m'}}</text>
+      <text class="record">最高 {{best}} m</text>
+      <text class="help">{{phase === 'over' ? '保持距离，再试一次' : '左右滑动，或点击下方左右侧'}}</text>
+      <text if="{{phase !== 'paused'}}" class="button" onclick="start">{{phase === 'ready' ? '开始驾驶' : '再来一局'}}</text>
+      <text if="{{phase === 'paused'}}" class="button" onclick="resume">继续驾驶</text>
+    </div>
+  </div>
+</template>
+<script>
+import page from './page';
+export default page;
+</script>
+<style>
+.page { width:466px; height:466px; background-color:#101c28; }
+.verge { position:absolute; left:73px; top:118px; width:320px; height:300px; background-color:#1c3938; border-radius:32px; }
+.road { position:absolute; left:111px; top:113px; width:244px; height:311px; background-color:#2b3644; }
+.edge { position:absolute; top:119px; width:3px; height:295px; background-color:#a4b6b7; }
+.left { left:111px; }.right { left:352px; }
+.mark { position:absolute; width:3px; height:34px; border-radius:2px; background-color:#7b8997; }
+.car { position:absolute; width:34px; height:58px; border-radius:8px; border-width:2px; border-color:#182531; }
+.player { background-color:#64d5df; }
+.glass { position:absolute; left:5px; width:20px; height:11px; border-radius:3px; background-color:#253e52; }
+.front { top:10px; }.rear { top:37px; height:8px; }
+.stripe { position:absolute; left:13px; top:1px; width:4px; height:51px; background-color:#cff6ee; }
+.light { position:absolute; top:3px; width:6px; height:4px; border-radius:2px; background-color:#f5eac7; }
+.light-left { left:3px; }.light-right { left:21px; }
+.hud { position:absolute; left:133px; top:53px; width:200px; height:55px; background-color:#101c28; justify-content:center; align-items:center; }
+.distance { font-size:35px; color:#edf5f2; text-align:center; }
+.pause { position:absolute; left:325px; top:80px; width:45px; height:40px; text-align:center; font-size:24px; color:#c0cecf; }
+.speed { position:absolute; left:172px; top:425px; width:122px; height:27px; text-align:center; font-size:17px; color:#8da5ae; }
+.arrow { position:absolute; top:332px; width:40px; height:50px; font-size:43px; text-align:center; color:#88aca8; }
+.arrow-left { left:68px; }.arrow-right { left:358px; }
+.card { position:absolute; left:79px; top:139px; width:308px; height:235px; background-color:#132330; border-radius:22px; flex-direction:column; align-items:center; }
+.title { margin-top:17px; height:40px; font-size:30px; color:#f1f5f0; }
+.result { height:35px; font-size:23px; color:#83e1dd; }
+.record { height:31px; font-size:18px; color:#96aeb6; }
+.help { height:34px; font-size:16px; color:#b6c8ca; }
+.button { width:210px; height:48px; text-align:center; font-size:24px; color:#83e1dd; }
+</style>
