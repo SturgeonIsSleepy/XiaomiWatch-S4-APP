@@ -1,0 +1,28 @@
+name: Publish Jump v1.2.0 clean scene update
+on:
+  push:
+    branches: [codex/watchjump-clean-1.2.0]
+    paths: [.github/workflows/publish-watchjump-clean.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Publish Watch Jump v1.2.0 clean scene and slower charge'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload existing build and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=releases/watchjump/1.2.0
+          (cd "$dir" && sha256sum --check SHA256SUMS.txt)
+          if ! gh release view watchjump-v1.2.0 >/dev/null 2>&1; then
+            gh release create watchjump-v1.2.0 --draft --target "$GITHUB_SHA" --title '跳一跳 v1.2.0 · 简洁场景与慢蓄力' --notes-file "$dir/release-notes.md"
+          fi
+          gh release upload watchjump-v1.2.0 "$dir"/* --clobber
+          gh release edit watchjump-v1.2.0 --draft=false --latest=false

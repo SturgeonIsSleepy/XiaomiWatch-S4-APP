@@ -5,7 +5,7 @@ const BEST_KEY = 'jump-best-v1';
 const PREF_KEY = 'jump-feedback-v1';
 const FRAME = 20;
 export default {
-  private: {score: 0, best: 0, combo: 0, phase: 'ready', haptics: true, hapticAvailable: true,
+  private: {score: 0, best: 0, combo: 0, phase: 'ready', haptics: true, hapticAvailable: true, menuOpen: false,
     hint: '按住蓄力，松手起跳', powerLabel: '轻按近 · 长按远', rewardText: '',
     powerStyle: 'width:0px;', playerStyle: '', headStyle: '', bodyStyle: '', shadowStyle: '',
     ringStyle: 'opacity:0;', rewardStyle: 'opacity:0;', platforms: []},
@@ -49,6 +49,9 @@ export default {
     // Each pulse is finite. No vibration loop or separate haptic timer.
     try{vibrator.vibrate({mode:'short'});}catch(e){this.hapticAvailable=false;}
   },
+  toggleMenu(){
+    if(this.phase==='ready'||this.phase==='over')this.menuOpen=!this.menuOpen;
+  },
   toggleHaptics(){
     if(this.phase!=='ready'&&this.phase!=='over')return;
     this.haptics=!this.haptics;this._prefsTouched=true;this._prefDirty=true;
@@ -64,8 +67,8 @@ export default {
   restart(){
     if(this._dead||['flying','landing','scrolling','falling'].indexOf(this.phase)>=0)return;
     this.cancelTimer();this._finger=null;this._flight=null;this._camera=null;
-    this.score=0;this.combo=0;this.phase='ready';this.hint='按住蓄力，松手起跳';this.resetPower();this.clearReward();
-    this._current={x:ANCHOR.x,y:ANCHOR.y,width:86,color:'#738398'};
+    this.score=0;this.combo=0;this._round=0;this.menuOpen=false;this.phase='ready';this.hint='按住蓄力，松手起跳';this.resetPower();this.clearReward();
+    this._current={x:ANCHOR.x,y:ANCHOR.y,width:86,color:'#ffffff',sideColor:'#bac8d0'};
     this._target=targetFor(0);this._x=ANCHOR.x;this._y=ANCHOR.y;
     this.paintPlatform(0,this._current,0,0,1);this.paintPlatform(1,this._target,0,0,1);this.paintPlatform(2,this._current,0,0,0);
     this.paintPlayer(this._x,this._y,this._y,0,1);
@@ -73,8 +76,8 @@ export default {
   paintPlatform(id,p,dx,dy,opacity,compression=0){
     const x=Math.round(p.x+dx),y=Math.round(p.y+dy),w=p.width,drop=Math.round(compression*7);
     const base='left:'+(x-w/2)+'px;';
-    this.platforms[id].sideStyle=base+'top:'+(y-1+drop)+'px;width:'+w+'px;height:'+(22-drop)+'px;opacity:'+opacity+';background-color:'+p.color+';';
-    this.platforms[id].topStyle=base+'top:'+(y-15+drop)+'px;width:'+w+'px;height:'+(30-compression*4)+'px;opacity:'+opacity+';background-color:'+p.color+';';
+    this.platforms[id].sideStyle=base+'top:'+(y-1+drop)+'px;width:'+w+'px;height:'+(36-drop)+'px;opacity:'+opacity+';background-color:'+(p.sideColor||p.color)+';';
+    this.platforms[id].topStyle=base+'top:'+(y-21+drop)+'px;width:'+w+'px;height:'+(42-compression*6)+'px;opacity:'+opacity+';background-color:'+p.color+';';
     this.platforms[id].markStyle='left:'+(x-8)+'px;top:'+(y-3+drop)+'px;opacity:'+opacity+';';
   },
   paintPlayer(x,y,groundY,squash,opacity,rotation=0){
@@ -91,21 +94,21 @@ export default {
   resetPower(){this.powerStyle='width:0px;background-color:#bce98b;';this.powerLabel='轻按近 · 长按远';},
   touchStart(event){
     if(this.phase==='charging'&&event&&event.touches&&event.touches.length!==1){this.cancelCharge();return;}
-    if(this.phase!=='ready'||!this._visible||this._dead)return;
+    if(this.phase!=='ready'||this.menuOpen||!this._visible||this._dead)return;
     const touches=event&&event.touches;if(!touches||touches.length!==1){this.cancelCharge();return;}
-    const t=touches[0];if(!Number.isFinite(t.clientY)||t.clientY<110||t.clientY>370)return;
+    const t=touches[0];if(!Number.isFinite(t.clientY)||t.clientY<135||t.clientY>420)return;
     this._finger=t.identifier===undefined?0:t.identifier;
-    this._chargeStart=Date.now();this._chargeStage=0;this.phase='charging';this.hint='蓄力下压 · 松手弹起';this.clearReward();
+    this._chargeStart=Date.now();this._chargeStage=0;this.phase='charging';this.hint='';this.clearReward();
     this.pulse();this.chargeTick();
   },
   chargeTick(){
     if(this.phase!=='charging')return;
     const p=charge(Date.now()-this._chargeStart),stage=p>=1?2:p>=.5?1:0;
     if(stage>this._chargeStage){this._chargeStage=stage;this.pulse();}
-    this.powerStyle='width:'+Math.round(p*236)+'px;background-color:'+(p>.8?'#f0b77a':'#bce98b')+';';
+    this.powerStyle='width:'+Math.round(p*236)+'px;background-color:'+(p>.8?'#b68a4d':'#6c8d88')+';';
     this.powerLabel=p>=1?'蓄力已满，松手起跳':'蓄力 '+Math.round(p*100)+'%';
     const ringW=32+p*36,ringH=12+p*12;
-    this.ringStyle='left:'+(this._x-ringW/2)+'px;top:'+(this._y+p*7-ringH/2)+'px;width:'+ringW+'px;height:'+ringH+'px;opacity:'+(0.25+p*.4)+';border-color:'+(p>.8?'#f0b77a':'#bce98b')+';';
+    this.ringStyle='left:'+(this._x-ringW/2)+'px;top:'+(this._y+p*7-ringH/2)+'px;width:'+ringW+'px;height:'+ringH+'px;opacity:'+(0.25+p*.4)+';border-color:'+(p>.8?'#b68a4d':'#6c8d88')+';';
     this.paintPlatform(0,this._current,0,0,1,p);
     this.paintPlayer(this._x,this._y+p*7,this._y+p*7,p,1);
     if(p<1)this.later(()=>this.chargeTick(),40);
@@ -116,7 +119,7 @@ export default {
     if(!changed||changed.length!==1||(event.touches&&event.touches.length)){this.cancelCharge();return;}
     const t=changed[0],id=t.identifier===undefined?0:t.identifier;if(id!==this._finger){this.cancelCharge();return;}
     const held=Math.min(MAX_HOLD,Math.max(0,Date.now()-this._chargeStart));
-    this.cancelTimer();this.clearReward();this._finger=null;this.phase='flying';this.hint='起跳！';this.pulse();
+    this.cancelTimer();this.clearReward();this._finger=null;this.phase='flying';this.hint='';this.pulse();
     this.paintPlatform(0,this._current,0,0,1);this.paintPlayer(this._x,this._y,this._y,-.3,1);
     const from={x:this._x,y:this._y},to=endpoint(from,this._target,held);
     this._flight={from,to,result:landing(to,this._current,this._target),start:Date.now()};this.flyTick(1);
@@ -124,7 +127,7 @@ export default {
   cancelCharge(){
     this.cancelTimer();this.clearReward();this._finger=null;if(this.phase==='charging')this.phase='ready';this.resetPower();
     if(this._current){this.paintPlatform(0,this._current,0,0,1);this.paintPlayer(this._x,this._y,this._y,0,1);}
-    if(this.phase==='ready')this.hint='按住蓄力，松手起跳';
+    if(this.phase==='ready')this.hint=this.score===0?'按住蓄力，松手起跳':'';
   },
   flyTick(step){
     this.later(()=>{
@@ -150,9 +153,9 @@ export default {
     this.combo=perfect?this.combo+1:0;
     const points=perfect?this.combo*2:1;
     this.score+=points;if(this.score>this.best){this.best=this.score;this.saveBest();}
-    this.hint=perfect?'中心连中 '+this.combo+' 次  +'+points:'稳稳落地 +1';
+    this.hint='';
     this.rewardText=perfect?'中心 +'+points:'+'+points;
-    const next=targetFor(this.score),dx=ANCHOR.x-this._target.x,dy=ANCHOR.y-this._target.y;
+    const next=targetFor(++this._round),dx=ANCHOR.x-this._target.x,dy=ANCHOR.y-this._target.y;
     const upcoming={...next,x:next.x-dx,y:next.y-dy};
     this._camera={old:this._current,current:this._target,next:upcoming,dx,dy,x:this._x,y:this._y,start:Date.now()};
     this.phase='landing';if(animate)this.landingTick(1);else this.finishCamera();
@@ -163,7 +166,7 @@ export default {
       this.paintPlatform(1,c.current,0,0,1,bounce*.4);
       this.paintPlayer(c.x,c.y+bounce*3,c.y,bounce,1);
       const w=30+t*56,h=12+t*20;
-      this.ringStyle='left:'+(c.x-w/2)+'px;top:'+(c.y-h/2)+'px;width:'+w+'px;height:'+h+'px;opacity:'+(1-t)+';border-color:'+(this.combo?'#ffe7a0':'#8bdce2')+';';
+      this.ringStyle='left:'+(c.x-w/2)+'px;top:'+(c.y-h/2)+'px;width:'+w+'px;height:'+h+'px;opacity:'+(1-t)+';border-color:'+(this.combo?'#b68a4d':'#6c8d88')+';';
       this.rewardStyle='left:'+(c.x-70)+'px;top:'+(c.y-76-t*16)+'px;opacity:'+(1-t*.5)+';';
       if(step<7)this.landingTick(step+1);
       else{this.clearReward();this.paintPlatform(1,c.current,0,0,1);this.phase='scrolling';c.start=Date.now();this.cameraTick(1);}

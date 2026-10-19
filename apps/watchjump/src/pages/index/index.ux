@@ -1,8 +1,7 @@
 <template>
   <div class="page" ontouchstart="touchStart" ontouchend="touchEnd" ontouchcancel="cancelCharge">
-    <div class="header"><text class="title">跳一跳</text><text class="score">{{score}}</text></div>
-    <text class="best">最佳 {{best}} · 连中 {{combo}}</text>
-    <text class="haptics" onclick="toggleHaptics">{{hapticAvailable ? (haptics ? '震动：开' : '震动：关') : '震动：不可用'}}</text>
+    <text class="score">{{score}}</text>
+    <text class="menu-button" onclick="toggleMenu">•••</text>
     <div for="p in platforms" tid="id" class="platform-side" style="{{p.sideStyle}}"></div>
     <div for="p in platforms" tid="id" class="platform-top" style="{{p.topStyle}}"></div>
     <div for="p in platforms" tid="id" class="platform-mark" style="{{p.markStyle}}"></div>
@@ -10,13 +9,22 @@
     <div class="landing-ring" style="{{ringStyle}}"></div>
     <div class="player" style="{{playerStyle}}">
       <div class="body" style="{{bodyStyle}}"></div>
-      <div class="head" style="{{headStyle}}"><div class="eye"></div><div class="eye"></div></div>
+      <div class="head" style="{{headStyle}}"></div>
     </div>
     <text class="reward" style="{{rewardStyle}}">{{rewardText}}</text>
-    <text class="hint">{{hint}}</text>
-    <text class="power-label">{{powerLabel}}</text>
-    <div class="power-track"><div class="power-fill" style="{{powerStyle}}"></div></div>
-    <text class="restart" onclick="restart">{{phase === 'over' ? '再来' : '新局'}}</text>
+    <text if="{{phase !== 'over' &amp;&amp; !menuOpen}}" class="hint">{{hint}}</text>
+    <div if="{{phase === 'over' &amp;&amp; !menuOpen}}" class="result">
+      <text class="result-title">{{hint}}</text>
+      <text class="again" onclick="restart">再来一局</text>
+    </div>
+    <div if="{{menuOpen}}" class="menu">
+      <text class="menu-title">跳一跳</text>
+      <text class="record">最高纪录 {{best}}</text>
+      <text class="setting" onclick="toggleHaptics">{{hapticAvailable ? (haptics ? '震动  开' : '震动  关') : '震动不可用'}}</text>
+      <text class="setting" onclick="restart">重新开始</text>
+      <text class="menu-help">按得越久，跳得越远</text>
+      <text class="setting back" onclick="toggleMenu">继续游戏</text>
+    </div>
   </div>
 </template>
 <script>
@@ -24,25 +32,26 @@ import page from './page';
 export default page;
 </script>
 <style>
-.page { width:466px; height:466px; background-color:#111b28; }
-.header { position:absolute; left:126px; top:40px; width:214px; height:44px; flex-direction:row; justify-content:space-between; align-items:center; }
-.title { font-size:30px; font-weight:bold; color:#f5f4e9; }
-.score { font-size:38px; font-weight:bold; color:#bce98b; }
-.best { position:absolute; left:105px; top:87px; width:158px; height:28px; text-align:center; font-size:17px; color:#a1afbd; }
-.haptics { position:absolute; left:264px; top:87px; width:104px; height:28px; text-align:center; font-size:17px; color:#bce98b; }
-.platform-side { position:absolute; border-radius:12px; }
-.platform-top { position:absolute; height:30px; border-radius:40px; border-width:2px; border-color:#d4e5e8; }
-.platform-mark { position:absolute; width:16px; height:6px; border-radius:6px; background-color:#f7faf5; }
-.shadow { position:absolute; height:8px; border-radius:12px; background-color:#050b12; }
+.page { width:466px; height:466px; background-color:#e7ecef; }
+.score { position:absolute; left:183px; top:48px; width:100px; height:57px; text-align:center; font-size:49px; color:#38434d; }
+.menu-button { position:absolute; left:310px; top:74px; width:56px; height:40px; text-align:center; font-size:24px; color:#71808a; }
+.platform-side { position:absolute; border-radius:20px; }
+.platform-top { position:absolute; border-radius:50px; }
+.platform-mark { position:absolute; width:16px; height:6px; border-radius:6px; background-color:#748e96; opacity:0.5; }
+.shadow { position:absolute; height:8px; border-radius:12px; background-color:#44545e; }
 .player { position:absolute; width:34px; height:54px; transform-origin:17px 24px; }
-.landing-ring { position:absolute; border-radius:50px; border-width:2px; border-color:#ffe7a0; }
-.reward { position:absolute; width:140px; height:32px; text-align:center; font-size:24px; font-weight:bold; color:#ffe7a0; }
-.body { position:absolute; border-radius:8px; background-color:#8fc86c; }
-.head { position:absolute; width:22px; height:22px; border-radius:11px; background-color:#d0f2a3; flex-direction:row; justify-content:center; align-items:center; }
-.eye { width:3px; height:4px; margin-left:2px; margin-right:2px; border-radius:2px; background-color:#172b24; }
-.hint { position:absolute; left:70px; top:356px; width:326px; height:28px; text-align:center; color:#e3ebee; font-size:21px; }
-.power-label { position:absolute; left:106px; top:386px; width:254px; text-align:center; font-size:18px; color:#bce98b; }
-.power-track { position:absolute; left:115px; top:414px; width:236px; height:9px; border-radius:5px; background-color:#334456; }
-.power-fill { height:9px; border-radius:5px; background-color:#bce98b; }
-.restart { position:absolute; left:196px; top:428px; width:74px; height:30px; text-align:center; color:#f0b77a; font-size:19px; }
+.landing-ring { position:absolute; border-radius:50px; border-width:2px; border-color:#6c8d88; }
+.reward { position:absolute; width:140px; height:32px; text-align:center; font-size:24px; font-weight:bold; color:#695b3d; }
+.body { position:absolute; border-radius:8px; background-color:#39434f; }
+.head { position:absolute; width:22px; height:22px; border-radius:11px; background-color:#303945; }
+.hint { position:absolute; left:83px; top:386px; width:300px; height:30px; text-align:center; color:#71808a; font-size:19px; }
+.result { position:absolute; left:70px; top:355px; width:326px; height:86px; flex-direction:column; align-items:center; background-color:#e7ecef; }
+.result-title { height:30px; font-size:18px; color:#71808a; text-align:center; }
+.again { width:160px; height:42px; text-align:center; font-size:23px; color:#38434d; }
+.menu { position:absolute; left:77px; top:93px; width:312px; height:300px; border-radius:24px; background-color:#f9fafb; flex-direction:column; align-items:center; }
+.menu-title { margin-top:15px; height:40px; font-size:28px; color:#38434d; }
+.record { height:35px; font-size:18px; color:#71808a; }
+.setting { width:230px; height:46px; text-align:center; font-size:22px; color:#38434d; }
+.menu-help { height:31px; font-size:16px; color:#71808a; }
+.back { color:#537b70; }
 </style>
