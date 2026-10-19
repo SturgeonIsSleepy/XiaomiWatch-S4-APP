@@ -1,5 +1,5 @@
 <template>
-  <div class="page" ontouchstart="touchStart" ontouchend="touchEnd" ontouchcancel="cancelTouch">
+  <div class="page" ontouchstart="touchStart" ontouchmove="touchMove" ontouchend="touchEnd" ontouchcancel="cancelTouch">
     <div class="verge"></div><div class="road"></div>
     <div class="edge left"></div><div class="edge right"></div>
     <div for="m in marks" tid="id" class="mark" style="{{m.style}}"></div>
@@ -16,11 +16,13 @@
     <text if="{{phase === 'running'}}" class="speed">{{pace}} km/h</text>
     <text if="{{phase === 'running'}}" class="arrow arrow-left">‹</text>
     <text if="{{phase === 'running'}}" class="arrow arrow-right">›</text>
+    <text if="{{phase === 'running'}}" class="brake" style="{{braking ? 'background-color:#a75d4e;color:#ffffff;' : 'background-color:#29434b;color:#d0e9e6;'}}">{{braking ? '刹车中' : '按住刹车'}}</text>
+    <text if="{{phase === 'running'}}" class="horn">{{hornLabel}}</text>
     <div if="{{phase !== 'running'}}" class="card">
       <text class="title">{{phase === 'ready' ? '迷你赛车' : (phase === 'paused' ? '已暂停' : '本次行驶')}}</text>
       <text class="result">{{phase === 'ready' ? '三车道 · 躲避来车' : meters + ' m'}}</text>
       <text class="record">最高 {{best}} m</text>
-      <text class="help">{{phase === 'over' ? '保持距离，再试一次' : '左右滑动，或点击下方左右侧'}}</text>
+      <text class="help">{{phase === 'over' ? '保持距离，再试一次' : '滑动换道 · 按住刹车 · 点喇叭'}}</text>
       <text if="{{phase !== 'paused'}}" class="button" onclick="start">{{phase === 'ready' ? '开始驾驶' : '再来一局'}}</text>
       <text if="{{phase === 'paused'}}" class="button" onclick="resume">继续驾驶</text>
     </div>
@@ -47,7 +49,9 @@ export default page;
 .hud { position:absolute; left:133px; top:53px; width:200px; height:55px; background-color:#101c28; justify-content:center; align-items:center; }
 .distance { font-size:35px; color:#edf5f2; text-align:center; }
 .pause { position:absolute; left:325px; top:80px; width:45px; height:40px; text-align:center; font-size:24px; color:#c0cecf; }
-.speed { position:absolute; left:172px; top:425px; width:122px; height:27px; text-align:center; font-size:17px; color:#8da5ae; }
+.speed { position:absolute; left:172px; top:105px; width:122px; height:27px; text-align:center; font-size:17px; color:#8da5ae; background-color:#101c28; }
+.brake { position:absolute; left:125px; top:395px; width:96px; height:44px; border-radius:13px; text-align:center; font-size:18px; }
+.horn { position:absolute; left:245px; top:395px; width:96px; height:44px; border-radius:13px; text-align:center; font-size:18px; background-color:#29434b; color:#d0e9e6; }
 .arrow { position:absolute; top:332px; width:40px; height:50px; font-size:43px; text-align:center; color:#88aca8; }
 .arrow-left { left:68px; }.arrow-right { left:358px; }
 .card { position:absolute; left:79px; top:139px; width:308px; height:235px; background-color:#132330; border-radius:22px; flex-direction:column; align-items:center; }

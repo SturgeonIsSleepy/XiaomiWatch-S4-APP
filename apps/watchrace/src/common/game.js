@@ -26,3 +26,32 @@ export function freshTraffic(random=Math.random) {
   return {x:LANES[Math.min(2,Math.max(0,Math.floor(random()*3)))],y:105,
     color:['#ed9366','#d6c078','#9a9bbf'][Math.min(2,Math.max(0,Math.floor(random()*3)))]};
 }
+
+export const TRAFFIC_SPEED = 90;
+export const HORN_BOOST = 24;
+export const HORN_DURATION = 1.6;
+export const HORN_COOLDOWN = 2.5;
+export function driveSpeed(speed, braking, meters, dt) {
+  const target=braking?TRAFFIC_SPEED:speedFor(meters),rate=braking?160:85;
+  return speed+Math.max(-rate*dt,Math.min(rate*dt,target-speed));
+}
+export function frontCar(cars,x) {
+  let target=null;
+  for(let i=0;i<cars.length;i++){
+    const c=cars[i];
+    if(c.active&&Math.abs(c.x-x)<28&&c.y<PLAYER_Y&&c.y>=115&&(!target||c.y>target.y))target=c;
+  }
+  return target;
+}
+export function freeSpawn(cars,random=Math.random) {
+  const lanes=LANES.filter(x=>!cars.some(c=>c.active&&c.x===x&&Math.abs(c.y-105)<90));
+  if(!lanes.length)return null;
+  const car=freshTraffic(random);car.x=lanes[Math.min(lanes.length-1,Math.floor(random()*lanes.length))];return car;
+}
+export function controlAt(t) {
+  if(t.clientY>=395&&t.clientY<=439){
+    if(t.clientX>=125&&t.clientX<=221)return 'brake';
+    if(t.clientX>=245&&t.clientX<=341)return 'horn';
+  }
+  return '';
+}
