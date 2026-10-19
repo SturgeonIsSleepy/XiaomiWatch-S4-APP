@@ -1,13 +1,18 @@
 <template>
   <div class="page" ontouchstart="touchStart" ontouchend="touchEnd" ontouchcancel="cancelCharge">
     <div class="header"><text class="title">跳一跳</text><text class="score">{{score}}</text></div>
-    <text class="best">最佳 {{best}} · 正中中心 +2</text>
+    <text class="best">最佳 {{best}} · 连中 {{combo}}</text>
+    <text class="haptics" onclick="toggleHaptics">{{hapticAvailable ? (haptics ? '震动：开' : '震动：关') : '震动：不可用'}}</text>
     <div for="p in platforms" tid="id" class="platform-side" style="{{p.sideStyle}}"></div>
     <div for="p in platforms" tid="id" class="platform-top" style="{{p.topStyle}}"></div>
     <div for="p in platforms" tid="id" class="platform-mark" style="{{p.markStyle}}"></div>
     <div class="shadow" style="{{shadowStyle}}"></div>
-    <div class="body" style="{{bodyStyle}}"></div>
-    <div class="head" style="{{headStyle}}"><div class="eye"></div><div class="eye"></div></div>
+    <div class="landing-ring" style="{{ringStyle}}"></div>
+    <div class="player" style="{{playerStyle}}">
+      <div class="body" style="{{bodyStyle}}"></div>
+      <div class="head" style="{{headStyle}}"><div class="eye"></div><div class="eye"></div></div>
+    </div>
+    <text class="reward" style="{{rewardStyle}}">{{rewardText}}</text>
     <text class="hint">{{hint}}</text>
     <text class="power-label">{{powerLabel}}</text>
     <div class="power-track"><div class="power-fill" style="{{powerStyle}}"></div></div>
@@ -23,11 +28,15 @@ export default page;
 .header { position:absolute; left:126px; top:40px; width:214px; height:44px; flex-direction:row; justify-content:space-between; align-items:center; }
 .title { font-size:30px; font-weight:bold; color:#f5f4e9; }
 .score { font-size:38px; font-weight:bold; color:#bce98b; }
-.best { position:absolute; left:110px; top:87px; width:246px; text-align:center; font-size:17px; color:#a1afbd; }
+.best { position:absolute; left:105px; top:87px; width:158px; height:28px; text-align:center; font-size:17px; color:#a1afbd; }
+.haptics { position:absolute; left:264px; top:87px; width:104px; height:28px; text-align:center; font-size:17px; color:#bce98b; }
 .platform-side { position:absolute; border-radius:12px; }
 .platform-top { position:absolute; height:30px; border-radius:40px; border-width:2px; border-color:#d4e5e8; }
 .platform-mark { position:absolute; width:16px; height:6px; border-radius:6px; background-color:#f7faf5; }
 .shadow { position:absolute; height:8px; border-radius:12px; background-color:#050b12; }
+.player { position:absolute; width:34px; height:54px; transform-origin:17px 24px; }
+.landing-ring { position:absolute; border-radius:50px; border-width:2px; border-color:#ffe7a0; }
+.reward { position:absolute; width:140px; height:32px; text-align:center; font-size:24px; font-weight:bold; color:#ffe7a0; }
 .body { position:absolute; border-radius:8px; background-color:#8fc86c; }
 .head { position:absolute; width:22px; height:22px; border-radius:11px; background-color:#d0f2a3; flex-direction:row; justify-content:center; align-items:center; }
 .eye { width:3px; height:4px; margin-left:2px; margin-right:2px; border-radius:2px; background-color:#172b24; }

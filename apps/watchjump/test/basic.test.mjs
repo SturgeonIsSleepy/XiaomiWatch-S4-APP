@@ -4,14 +4,15 @@ import {readFileSync} from 'node:fs';
 const code=readFileSync(new URL('../src/common/game.js',import.meta.url),'utf8');
 const g=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const source=readFileSync(new URL('../src/pages/index/page.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace('export default','return');
-function harness(){
- let now=5000,id=0;const timers=new Map(),writes=[];
- const storage={get(o){o.success('3');},set(o){writes.push(o.value);o.success?.();o.complete?.();}};
- const names=['storage','ANCHOR','MAX_HOLD','charge','endpoint','landing','targetFor','arc','setTimeout','clearTimeout','Date'];
- const args=[storage,g.ANCHOR,g.MAX_HOLD,g.charge,g.endpoint,g.landing,score=>g.targetFor(score,()=>.5),g.arc,
+function harness(options={}){
+ let now=5000,id=0;const timers=new Map(),writes=[],pulses=[];
+ const storage={get(o){o.success(o.key==='jump-best-v1'?'3':JSON.stringify({haptics:options.haptics!==false}));},set(o){writes.push({key:o.key,value:o.value});o.success?.();o.complete?.();}};
+ const vibrator={vibrate(o){if(options.broken)throw Error('unsupported');pulses.push({time:now,mode:o.mode});}};
+ const names=['storage','vibrator','ANCHOR','MAX_HOLD','charge','endpoint','landing','targetFor','arc','setTimeout','clearTimeout','Date'];
+ const args=[storage,vibrator,g.ANCHOR,g.MAX_HOLD,g.charge,g.endpoint,g.landing,score=>g.targetFor(score,()=>.5),g.arc,
   (fn,ms)=>{const key=++id;timers.set(key,{fn,ms});return key;},key=>timers.delete(key),{now:()=>now}];
  const vm=new Function(...names,source)(...args);Object.assign(vm,structuredClone(vm.private));vm.onInit();
- return {vm,timers,writes,advance(ms){now+=ms;},fire(){const [id,t]=timers.entries().next().value;timers.delete(id);now+=t.ms;t.fn();}};
+ return {vm,timers,writes,pulses,advance(ms){now+=ms;},fire(){const [id,t]=timers.entries().next().value;timers.delete(id);now+=t.ms;t.fn();}};
 }
 const touch={identifier:0,clientX:230,clientY:300};
 const start=vm=>vm.touchStart({touches:[touch]});
@@ -35,7 +36,7 @@ test('release jumps, scores once and finishes camera with no idle timer',()=>{
  const h=harness(),vm=h.vm;start(vm);
  h.advance((Math.hypot(vm._target.x-vm._x,vm._target.y-vm._y)-24)/.28);
  end(vm);end(vm);assert.equal(vm.phase,'flying');assert.equal(h.timers.size,1);
- let n=0;while(h.timers.size){h.fire();assert.ok(++n<=27);assert.ok(h.timers.size<=1);}
+ let n=0;while(h.timers.size){h.fire();assert.doesNotThrow(()=>JSON.parse(vm.playerStyle.transform));assert.ok(++n<=34);assert.ok(h.timers.size<=1);}
  assert.equal(vm.phase,'ready');assert.equal(vm.score,2);assert.equal(vm.best,3);assert.equal(vm._current.x,233);assert.equal(vm._current.y,310);
 });
 test('multitouch and hiding midflight cannot leave active work behind',()=>{
@@ -43,4 +44,23 @@ test('multitouch and hiding midflight cannot leave active work behind',()=>{
  assert.equal(vm.phase,'ready');assert.equal(h.timers.size,0);
  start(vm);h.advance(1100);end(vm);assert.equal(vm.phase,'flying');vm.onHide();
  assert.equal(vm.phase,'over');assert.equal(h.timers.size,0);vm.onDestroy();assert.equal(h.timers.size,0);
+});
+
+test('haptics use finite short pulses, are throttled and honor off/hidden/unsupported states',()=>{
+ const h=harness();start(h.vm);assert.equal(h.pulses.length,1);h.vm.pulse();assert.equal(h.pulses.length,1);
+ h.advance(600);h.fire();assert.equal(h.pulses.length,2);h.advance(600);h.fire();assert.equal(h.pulses.length,3);assert.equal(h.timers.size,0);
+ h.vm.onHide();h.advance(300);h.vm.pulse();assert.equal(h.pulses.length,3);assert.ok(h.pulses.every(p=>p.mode==='short'));
+ const off=harness({haptics:false});start(off.vm);off.advance(800);off.fire();assert.equal(off.pulses.length,0);
+ const broken=harness({broken:true});start(broken.vm);assert.equal(broken.vm.hapticAvailable,false);assert.equal(broken.timers.size,1);
+});
+test('haptic setting persists and landing feedback has bounded work and clears on hide',()=>{
+ const h=harness(),vm=h.vm;vm.toggleHaptics();assert.equal(vm.haptics,false);assert.equal(JSON.parse(h.writes.at(-1).value).haptics,false);
+ start(vm);h.advance((Math.hypot(vm._target.x-vm._x,vm._target.y-vm._y)-24)/.28);end(vm);
+ for(let i=0;i<18;i++)h.fire();assert.equal(vm.phase,'landing');assert.equal(vm.combo,1);h.fire();assert.match(vm.ringStyle,/width:/);
+ vm.onHide();assert.equal(vm.phase,'ready');assert.equal(h.timers.size,0);assert.equal(vm.ringStyle,'opacity:0;');
+});
+test('consecutive centers award 2 then 4, a normal landing resets the combo',()=>{
+ const h=harness(),vm=h.vm;
+ function jump(perfect){vm._flight={from:{x:vm._x,y:vm._y},to:{x:vm._target.x,y:vm._target.y},result:{hit:true,advance:true,points:perfect?2:1}};vm.completeFlight(false);}
+ jump(true);assert.equal(vm.score,2);jump(true);assert.equal(vm.score,6);assert.equal(vm.combo,2);jump(false);assert.equal(vm.score,7);assert.equal(vm.combo,0);
 });
