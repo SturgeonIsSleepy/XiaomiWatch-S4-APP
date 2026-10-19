@@ -10,77 +10,78 @@ function harness(options={}){
  const audio={play(){if(options.audioBroken)throw Error("audio unavailable");sounds.push("play");},stop(){sounds.push("stop");}};
  const values={storage,audio,...g,setTimeout:(fn,ms)=>{const key=++id;timers.set(key,{fn,ms});return key;},clearTimeout:id=>timers.delete(id),Date:{now:()=>now}};
  const vm=new Function(...Object.keys(values),source)(...Object.values(values));Object.assign(vm,structuredClone(vm.private));vm.onInit();
- return {vm,timers,writes,sounds,audio,fire(ms){const [key,t]=timers.entries().next().value;timers.delete(key);now+=ms??t.ms;t.fn();}};
+ return {vm,timers,writes,sounds,audio,advance(ms){now+=ms;},fire(ms){const [key,t]=timers.entries().next().value;timers.delete(key);now+=ms??t.ms;t.fn();}};
 }
 const finger=(x=230,y=340,id=0)=>({clientX:x,clientY:y,identifier:id});
 function input(vm,x1,y1,x2,y2){vm.touchStart({touches:[finger(x1,y1)]});vm.touchEnd({touches:[],changedTouches:[finger(x2,y2)]});}
-test('speed and spawn interval are gradual and bounded; traffic stays in three lanes',()=>{
- assert.ok(g.speedFor(100)>g.speedFor(0));assert.equal(g.speedFor(10000),250);
+test('speed is faster and responsive, braking caps at ordinary speed; road limits keep car inside',()=>{
+ assert.equal(g.speedFor(0),420);assert.equal(g.driveSpeed(90,false,0,.1),120);
+ assert.equal(g.driveSpeed(419,false,0,.1),420);assert.equal(g.driveSpeed(100,true,0,.1),90);
+ assert.equal(g.roadX(-20),131);assert.equal(g.roadX(500),335);assert.equal(g.roadY(0),170);assert.equal(g.roadY(500),352);
  assert.ok(g.intervalFor(100)<g.intervalFor(0));assert.equal(g.intervalFor(10000),920);
- for(const n of [0,.5,.999])assert.ok(g.LANES.includes(g.freshTraffic(()=>n).x));
- assert.equal(g.clampLane(-1),0);assert.equal(g.clampLane(3),2);assert.equal(g.moveX(233,2,.05),269);
 });
-test('swept collision catches crossings while allowing adjacent lanes and nonoverlapping times',()=>{
+test('swept collision covers continuous horizontal and vertical dragging without false time intersections',()=>{
  assert.equal(g.collision(233,233,{x:233},280,430),true);
  assert.equal(g.collision(153,153,{x:313},280,430),false);
- assert.equal(g.collision(153,233,{x:233},100,120),false);
- assert.equal(g.collision(153,233,{x:233},352,352),true);
- // The paths cross their respective axes at different times, with no actual collision.
  assert.equal(g.collision(153,313,{x:153},200,352),false);
+ assert.equal(g.collision(233,233,{x:233},240,240,352,170),true);
+ assert.equal(g.collision(153,153,{x:233},240,240,352,170),false);
 });
-test('idle has no timer; starting twice leaves only one loop and paint keeps stable records',()=>{
+test('idle is quiet; duplicate start keeps one loop, preserves fixed records and begins with automatic brake',()=>{
  const h=harness(),vm=h.vm,record=vm.traffic[0];assert.equal(h.timers.size,0);assert.equal(vm.best,9);
- vm.start();vm.start();assert.equal(h.timers.size,1);h.fire();assert.equal(h.timers.size,1);assert.equal(vm.traffic[0],record);
- vm.pause();assert.equal(h.timers.size,0);assert.equal(vm.phase,'paused');vm.resume();assert.equal(h.timers.size,1);
+ vm.start();vm.start();h.fire();assert.equal(h.timers.size,1);assert.equal(vm.traffic[0],record);assert.equal(vm._speed,90);assert.equal(vm.braking,true);
+ vm.pause();assert.equal(h.timers.size,0);vm.resume();assert.equal(h.timers.size,1);
 });
-test('swipes and side taps steer once; vertical, multitouch and HUD input do not steer',()=>{
- const h=harness(),vm=h.vm;vm.start();input(vm,230,330,300,330);assert.equal(vm._lane,2);
- input(vm,230,330,150,330);assert.equal(vm._lane,1);input(vm,150,340,150,340);assert.equal(vm._lane,0);
- input(vm,150,340,150,340);assert.equal(vm._lane,0);input(vm,250,340,250,240);assert.equal(vm._lane,0);
- input(vm,330,90,330,90);assert.equal(vm._lane,0);
- vm.touchStart({touches:[finger()]});vm.touchStart({touches:[finger(),finger(250,340,1)]});vm.touchEnd({touches:[],changedTouches:[finger(320,340)]});assert.equal(vm._lane,0);
+test('press accelerates and continuously follows both coordinates, release brakes immediately and keeps final position',()=>{
+ const h=harness(),vm=h.vm;vm.start();vm.touchStart({touches:[finger(180,300)]});h.fire();
+ assert.equal(vm.accelerating,true);assert.equal(vm.braking,false);assert.deepEqual([vm._x,vm._y],[180,300]);assert.ok(vm._speed>90);
+ vm.touchMove({touches:[finger(251,280)]});h.fire();assert.deepEqual([vm._x,vm._y],[251,280]);assert.match(vm.playerStyle,/left:234px;top:251px/);
+ vm.touchEnd({touches:[],changedTouches:[finger(270,290)]});const speed=vm._speed;assert.equal(vm.braking,true);assert.equal(vm.accelerating,false);
+ h.fire();assert.deepEqual([vm._x,vm._y],[270,290]);assert.ok(vm._speed<speed);assert.equal(vm._driveFinger,null);
 });
-test('a delayed frame is bounded; hide freezes progress and resume resets wall clock',()=>{
- const h=harness(),vm=h.vm;vm.start();h.fire(5000);assert.ok(vm._distance<2);const distance=vm._distance;
- vm.onHide();assert.equal(vm.phase,'paused');assert.equal(h.timers.size,0);assert.equal(vm._touch,null);
- vm.onShow();assert.equal(h.timers.size,0);assert.equal(vm._distance,distance);vm.resume();h.fire();assert.ok(vm._distance-distance<1);
- vm.onDestroy();assert.equal(h.timers.size,0);vm.resume();assert.equal(h.timers.size,0);
+test('horn has no cooldown, every press responds without stacking speed; selection follows actual player height',()=>{
+ const h=harness(),vm=h.vm;vm.start();const cars=vm.traffic;
+ Object.assign(cars[0],{active:true,x:233,y:180});Object.assign(cars[1],{active:true,x:233,y:260});Object.assign(cars[2],{active:true,x:153,y:280});Object.assign(cars[3],{active:true,x:233,y:420});
+ for(let i=0;i<5;i++)vm.honk();assert.equal(h.sounds.filter(s=>s==='play').length,5);assert.equal(cars[1].boost,g.HORN_DURATION);
+ assert.equal(cars[0].boost,0);assert.equal(cars[2].boost,0);assert.equal(cars[3].boost,0);assert.equal('_hornCooldown' in vm,false);
+ const y=cars[1].y;h.fire();assert.ok(cars[1].y<y);vm.honk();assert.equal(cars[1].boost,g.HORN_DURATION);
+ for(let i=0;i<33;i++)h.fire();assert.equal(cars[1].boost,0);assert.ok(cars[1].y-cars[0].y>=68-1e-8);
+ assert.equal(g.frontCar(cars,233,170),null);vm.pause();assert.equal(h.sounds.at(-1),'stop');assert.equal(h.timers.size,0);
 });
-test('traffic spawns, passes once; crash stops work and persists best; retry clears the scene',()=>{
- const h=harness(),vm=h.vm;vm.start();vm._spawn=2000;h.fire();assert.equal(vm.traffic.filter(c=>c.active).length,1);
- const c=vm.traffic[0];c.x=313;c.y=449;h.fire();assert.equal(vm.passed,1);assert.equal(c.active,false);
- vm._distance=21;c.x=233;c.y=345;c.active=true;h.fire();assert.equal(vm.phase,'over');assert.equal(h.timers.size,0);assert.equal(vm.best,21);assert.equal(h.writes.at(-1),'21');
- vm.start();assert.equal(vm.phase,'running');assert.equal(vm.meters,0);assert.equal(vm.passed,0);assert.equal(vm.traffic.some(c=>c.active),false);assert.equal(vm.best,21);
+test('second finger honks without stopping acceleration or stealing steering; horn alone never accelerates',()=>{
+ const h=harness(),vm=h.vm;vm.start();const drive=finger(200,310,0),horn=finger(290,415,1);
+ vm.touchStart({touches:[horn],changedTouches:[horn]});assert.equal(vm.accelerating,false);vm.touchEnd({touches:[],changedTouches:[horn]});
+ vm.touchStart({touches:[drive]});vm.touchStart({touches:[drive,horn],changedTouches:[horn]});assert.equal(vm.accelerating,true);
+ vm.touchMove({touches:[finger(215,270),horn]});h.fire();assert.deepEqual([vm._x,vm._y],[215,270]);
+ vm.touchEnd({touches:[drive],changedTouches:[horn]});assert.equal(vm.accelerating,true);
+ vm.touchEnd({touches:[],changedTouches:[drive]});assert.equal(vm.braking,true);
 });
-
-test('braking converges to traffic speed, keeps road moving and front gap stable; release accelerates',()=>{
- const h=harness(),vm=h.vm;vm.start();const c=vm.traffic[0];Object.assign(c,{active:true,x:233,y:210,boost:0});
- vm.touchStart({touches:[finger(170,415)]});assert.equal(vm.braking,true);assert.equal(vm._lane,1);
- for(let i=0;i<8;i++)h.fire(50);assert.equal(vm._speed,g.TRAFFIC_SPEED);
- const y=c.y,road=vm._road;h.fire();assert.ok(Math.abs(c.y-y)<1e-8);assert.notEqual(vm._road,road);assert.equal(vm.pace,40);
- vm.touchEnd({touches:[],changedTouches:[finger(170,415)]});assert.equal(vm.braking,false);h.fire();assert.ok(vm._speed>g.TRAFFIC_SPEED);assert.equal(vm._lane,1);
+test('cancel, lost finger, pause, hide and destroy cannot leave acceleration or timers active',()=>{
+ const h=harness(),vm=h.vm;vm.start();const drive=finger();
+ vm.touchStart({touches:[drive]});vm.touchMove({touches:[]});assert.equal(vm.braking,true);
+ vm.touchStart({touches:[drive]});vm.cancelTouch();assert.equal(vm.accelerating,false);
+ vm.touchStart({touches:[drive]});vm.pause();assert.equal(vm.braking,true);assert.equal(h.timers.size,0);vm.resume();assert.equal(vm.accelerating,false);
+ vm.touchStart({touches:[drive]});vm.onHide();assert.equal(vm._driveFinger,null);assert.equal(vm.braking,true);assert.equal(h.timers.size,0);
+ vm.onShow();assert.equal(h.timers.size,0);vm.resume();assert.equal(vm.accelerating,false);vm.onDestroy();assert.equal(h.timers.size,0);vm.resume();assert.equal(h.timers.size,0);
 });
-test('horn boosts only nearest car ahead in current lane, with cooldown, expiry and finite audio',()=>{
- const h=harness(),vm=h.vm;vm.start();
- vm._speed=g.TRAFFIC_SPEED;vm.braking=true;
- const cars=vm.traffic;Object.assign(cars[0],{active:true,x:233,y:180});Object.assign(cars[1],{active:true,x:233,y:260});Object.assign(cars[2],{active:true,x:153,y:280});Object.assign(cars[3],{active:true,x:233,y:420});
- vm.honk();assert.equal(cars[1].boost,g.HORN_DURATION);assert.equal(cars[0].boost,0);assert.equal(cars[2].boost,0);assert.equal(cars[3].boost,0);
- assert.deepEqual(h.sounds,['play']);vm.honk();assert.deepEqual(h.sounds,['play']);const y=cars[1].y;h.fire();assert.ok(cars[1].y<y);
- for(let i=0;i<32;i++)h.fire();assert.equal(cars[1].boost,0);const after=cars[1].y;h.fire();assert.ok(Math.abs(cars[1].y-after)<1e-8);
- assert.ok(cars[1].y-cars[0].y>=68-1e-8);
- assert.ok(h.timers.size<=1);vm.pause();assert.equal(h.timers.size,0);assert.equal(h.sounds.at(-1),'stop');
+test('release decelerates from top speed to ordinary speed and stabilizes following distance',()=>{
+ const h=harness(),vm=h.vm;vm.start();vm._speed=420;const c=vm.traffic[0];Object.assign(c,{active:true,x:233,y:120,boost:0});
+ for(let i=0;i<10;i++)h.fire(100);assert.equal(vm._speed,90);assert.equal(vm.pace,40);
+ const y=c.y,road=vm._road;h.fire();assert.ok(Math.abs(c.y-y)<1e-8);assert.notEqual(vm._road,road);
+ vm.touchStart({touches:[finger(233,352)]});h.fire();assert.ok(vm._speed>90);
 });
-test('brake plus horn supports two fingers; release, dragging off, cancel and hide clear brake without steering',()=>{
- const h=harness(),vm=h.vm;vm.start();const brake=finger(170,415,0),horn=finger(290,415,1);
- vm.touchStart({touches:[brake],changedTouches:[brake]});vm.touchStart({touches:[brake,horn],changedTouches:[horn]});assert.equal(vm.braking,true);assert.equal(h.sounds.length,1);
- vm.touchEnd({touches:[brake],changedTouches:[horn]});assert.equal(vm.braking,true);assert.equal(vm._lane,1);
- vm.touchMove({touches:[finger(170,380)]});assert.equal(vm.braking,false);
- vm.touchStart({touches:[brake]});vm.cancelTouch();assert.equal(vm.braking,false);
- vm.touchStart({touches:[brake]});vm.onHide();assert.equal(vm.braking,false);assert.equal(vm._brakeFinger,null);assert.equal(h.timers.size,0);vm.onShow();vm.resume();assert.equal(vm.braking,false);
+test('delayed frames are bounded and paused time is not caught up on resume',()=>{
+ const h=harness(),vm=h.vm;vm.start();vm.touchStart({touches:[finger()]});h.fire(5000);assert.ok(vm._distance<2);
+ vm.pause();const distance=vm._distance;h.advance(5000);vm.resume();h.fire();assert.ok(vm._distance-distance<1);
 });
-test('stationary traffic does not overlap at spawn; horn without a target or audio still works and cools down',()=>{
+test('stationary spawn spacing and sync/async audio failures preserve game and unlimited horn responses',()=>{
  const cars=g.LANES.map(x=>({active:true,x,y:105}));assert.equal(g.freeSpawn(cars),null);cars[0].y=210;assert.equal(g.freeSpawn(cars,()=>.5).x,153);
- const h=harness({audioBroken:true}),vm=h.vm;vm.start();assert.doesNotThrow(()=>vm.honk());assert.equal(vm.hornLabel,'无前车');assert.ok(vm._hornCooldown>0);
- const asyncFail=harness();asyncFail.vm.start();asyncFail.audio.onerror();assert.doesNotThrow(()=>asyncFail.vm.honk());assert.equal(asyncFail.sounds.length,0);assert.ok(asyncFail.vm._hornCooldown>0);
- vm.pause();const cooldown=vm._hornCooldown;vm.honk();assert.equal(vm._hornCooldown,cooldown);assert.equal(h.timers.size,0);
+ const h=harness({audioBroken:true});h.vm.start();assert.doesNotThrow(()=>h.vm.honk());h.vm.honk();assert.equal(h.vm.hornLabel,'无前车');assert.equal(h.timers.size,1);
+ const a=harness();a.vm.start();a.audio.onerror();a.vm.honk();a.vm.honk();assert.equal(a.sounds.length,0);assert.equal(a.vm.hornLabel,'无前车');
+});
+test('traffic spawn, passing, collision, best save and retry remain functional',()=>{
+ const h=harness(),vm=h.vm;vm.start();vm._spawn=2000;h.fire();assert.equal(vm.traffic.filter(c=>c.active).length,1);
+ const c=vm.traffic[0];c.x=313;c.y=449;vm._speed=120;vm.accelerating=true;vm.braking=false;h.fire();assert.equal(vm.passed,1);assert.equal(c.active,false);
+ vm._distance=21;c.x=233;c.y=345;c.active=true;h.fire();assert.equal(vm.phase,'over');assert.equal(h.timers.size,0);assert.equal(vm.best,21);assert.equal(h.writes.at(-1),'21');
+ vm.start();assert.equal(vm.meters,0);assert.equal(vm.traffic.some(c=>c.active),false);assert.equal(vm.best,21);assert.equal(vm.braking,true);assert.equal(vm._y,352);
 });

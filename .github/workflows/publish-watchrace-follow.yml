@@ -1,0 +1,28 @@
+name: Publish Watch Race v1.2.0
+on:
+  push:
+    branches: [codex/watchrace-follow-1.2.0]
+    paths: [.github/workflows/publish-watchrace-follow.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Publish Watch Race v1.2.0 direct touch driving'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload existing build and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=releases/watchrace/1.2.0
+          (cd "$dir" && sha256sum --check SHA256SUMS.txt)
+          if ! gh release view watchrace-v1.2.0 >/dev/null 2>&1; then
+            gh release create watchrace-v1.2.0 --draft --target "$GITHUB_SHA" --title '迷你赛车 v1.2.0 · 长按加速与自由跟随' --notes-file "$dir/release-notes.md"
+          fi
+          gh release upload watchrace-v1.2.0 "$dir"/* --clobber
+          gh release edit watchrace-v1.2.0 --draft=false --latest=false
